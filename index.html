@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mathematics CBT Quiz</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #f5f7fa; margin: 0; padding: 0; }
+  .container { max-width: 700px; margin: 40px auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 0 15px rgba(0,0,0,0.1); }
+  h1 { text-align: center; color: #333; }
+  .question { margin-bottom: 20px; }
+  .options label { display: block; margin: 6px 0; padding: 6px; border-radius: 8px; cursor: pointer; }
+  .options label:hover { background: #eef3ff; }
+  button { background: #007bff; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; }
+  button:hover { background: #0056b3; }
+  .result { font-size: 18px; font-weight: bold; text-align: center; margin-top: 20px; }
+  #timer { text-align: center; font-size: 18px; margin-bottom: 15px; color: #d9534f; font-weight: bold; }
+  .correct { background: #d4edda; }
+  .wrong { background: #f8d7da; }
+  #loginPage { max-width: 400px; margin: 100px auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 0 15px rgba(0,0,0,0.1); text-align: center; }
+  #loginPage input { width: 80%; padding: 10px; margin: 10px 0; border-radius: 6px; border: 1px solid #ccc; }
+</style>
+</head>
+<body>
+
+<div id="loginPage">
+  <h1>Student Login</h1>
+  <input type="text" id="studentName" placeholder="Enter your name" required><br>
+  <input type="text" id="studentClass" placeholder="Enter your class or ID" required><br>
+  <button onclick="startQuiz()">Start Quiz</button>
+</div>
+
+<div class="container" id="quizContainer" style="display:none;">
+  <h1>Mathematics CBT Quiz</h1>
+  <div id="timer">Time Left: 40:00</div>
+  <form id="quizForm"></form>
+  <div style="text-align:center;">
+    <button type="button" id="submitBtn" onclick="checkAnswers()">Submit Answers</button>
+  </div>
+  <div class="result" id="result"></div>
+  <div style="text-align:center; margin-top:15px;">
+    <button id="downloadBtn" style="display:none;" onclick="downloadPDF()">Download Result as PDF</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+let studentName = '';
+let studentClass = '';
+
+function startQuiz() {
+  studentName = document.getElementById('studentName').value.trim();
+  studentClass = document.getElementById('studentClass').value.trim();
+  if (studentName === '' || studentClass === '') {
+    alert('Please enter both your name and class/ID.');
+    return;
+  }
+  document.getElementById('loginPage').style.display = 'none';
+  document.getElementById('quizContainer').style.display = 'block';
+  startTimer();
+}
+
+const questions = [
+  // ----- Modulo Arithmetic -----
+  {q: 'Find the remainder when 17 is divided by 5.', options: ['A. 1','B. 2','C. 3','D. 4'], correct: 'C'},
+  {q: 'What is (23 + 18) mod 7?', options: ['A. 6','B. 5','C. 4','D. 3'], correct: 'C'},
+  {q: 'Simplify (9 × 8) mod 5.', options: ['A. 2','B. 1','C. 4','D. 3'], correct: 'C'},
+  {q: 'If a ≡ 3 (mod 4) and b ≡ 2 (mod 4), find (a + b) mod 4.', options: ['A. 0','B. 1','C. 2','D. 3'], correct: 'A'},
+  {q: 'Find (7²) mod 5.', options: ['A. 0','B. 1','C. 2','D. 4'], correct: 'B'},
+
+  // ----- Relationship between Indices and Logarithms -----
+  {q: 'If 2³ = 8, then log₂8 = ?', options: ['A. 1','B. 2','C. 3','D. 4'], correct: 'C'},
+  {q: 'Express log₅25 = 2 in index form.', options: ['A. 5² = 25','B. 2⁵ = 25','C. 25² = 5','D. 5² = 10'], correct: 'A'},
+  {q: 'If log₁₀x = 2, find x.', options: ['A. 10','B. 100','C. 1000','D. 20'], correct: 'B'},
+  {q: 'log₃81 = ?', options: ['A. 2','B. 3','C. 4','D. 5'], correct: 'C'},
+  {q: 'If 10ˣ = 0.001, find x.', options: ['A. -1','B. -2','C. -3','D. 3'], correct: 'C'}
+];
+
+function shuffle(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+}
+
+shuffle(questions);
+
+const form = document.getElementById('quizForm');
+questions.forEach((item, index) => {
+  const div = document.createElement('div');
+  div.className = 'question';
+  div.innerHTML = `<p>${index + 1}. ${item.q}</p>`;
+  const opts = document.createElement('div');
+  opts.className = 'options';
+  item.options.forEach(opt => {
+    opts.innerHTML += `<label><input type='radio' name='q${index}' value='${opt[0]}'> ${opt}</label>`;
+  });
+  div.appendChild(opts);
+  form.appendChild(div);
+});
+
+let submitted = false;
+function checkAnswers() {
+  if (submitted) return;
+  submitted = true;
+  let score = 0;
+  const allQuestions = document.querySelectorAll('.question');
+
+  questions.forEach((item, index) => {
+    const selected = document.querySelector(`input[name='q${index}']:checked`);
+    const labels = allQuestions[index].querySelectorAll('label');
+    labels.forEach(label => {
+      if (label.textContent.trim().startsWith(item.correct)) {
+        label.classList.add('correct');
+      }
+    });
+    if (selected) {
+      if (selected.value === item.correct) {
+        score++;
+      } else {
+        selected.parentElement.classList.add('wrong');
+      }
+    }
+  });
+
+  const resultText = `Well done, ${studentName} (Class: ${studentClass})\nYou scored ${score} out of 10!`;
+  document.getElementById('result').innerHTML = resultText.replace(/\n/g, '<br>');
+  document.getElementById('submitBtn').disabled = true;
+  document.getElementById('downloadBtn').style.display = 'inline-block';
+}
+
+let time = 2400; // 40 minutes in seconds
+const timerDisplay = document.getElementById('timer');
+let countdown;
+
+function startTimer() {
+  countdown = setInterval(() => {
+    const minutes = Math.floor(time / 60);
+    const seconds = time % 60;
+    timerDisplay.textContent = `Time Left: ${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+    time--;
+    if (time < 0) {
+      clearInterval(countdown);
+      timerDisplay.textContent = 'Time Up!';
+      checkAnswers();
+    }
+  }, 1000);
+}
+
+function downloadPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const date = new Date().toLocaleString();
+  const result = document.getElementById('result').textContent;
+  doc.text('Mathematics CBT Quiz Result', 20, 20);
+  doc.text(`Name: ${studentName}`, 20, 40);
+  doc.text(`Class: ${studentClass}`, 20, 50);
+  doc.text(result, 20, 70);
+  doc.text(`Date: ${date}`, 20, 90);
+  doc.save(`Quiz_Result_${studentName}.pdf`);
+}
+</script>
+</body>
+</html>
